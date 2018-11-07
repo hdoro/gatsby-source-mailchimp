@@ -7,7 +7,7 @@ export interface IFetchAllCampaigns {
   defaultCount: number;
   campaignsURL: string;
   authParams: any;
-  campaignFields: string[];
+  fields: string;
 }
 
 export const fetchAllCampaigns = async ({
@@ -16,7 +16,7 @@ export const fetchAllCampaigns = async ({
   count,
   campaignsURL,
   authParams,
-  campaignFields,
+  fields,
   defaultCount,
 }: IFetchAllCampaigns) => {
   const reqLength = campaigns.length;
@@ -27,8 +27,10 @@ export const fetchAllCampaigns = async ({
       params: {
         status: 'sent',
         offset: reqLength * i,
-        fields: campaignFields.join(','),
+        fields,
         count: count || defaultCount,
+        sort_field: 'send_time',
+        sort_dir: 'DESC',
       },
     });
     if (newBatch.data.campaigns) {

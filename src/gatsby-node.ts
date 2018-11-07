@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { validateConfig } from './configValidation';
-import { colorizeLog } from './helpers';
+import { colorizeLog, consoleColors } from './helpers';
 import { fetchAllCampaigns } from './fetchAllCampaigns';
 import { fetchContent } from './fetchContent';
 
@@ -36,7 +36,6 @@ export const sourceNodes = async (
     rootURL,
     key,
     authUsername = defaultUsername,
-    campaignFields = defaultCampaignsFields,
     contentFields = defaultContentFields,
     nodeType = defaultNodeType,
     count,
@@ -46,11 +45,20 @@ export const sourceNodes = async (
     rootURL,
     key,
     authUsername,
-    campaignFields,
+    campaignFields: configOptions.campaignFields || defaultCampaignsFields,
     contentFields,
     nodeType,
     count: count || defaultCount,
   });
+
+  // We absolutely need total_items and campaigns.id in order
+  // to paginate campaigns and fetch their content, so we append
+  // them to the end of the campaignFields string, regardless
+  const campaignFields = [
+    ...(configOptions.campaignFields || defaultCampaignsFields),
+    'campaigns.id',
+    'total_items',
+  ].join(',');
 
   const campaignsURL = `${rootURL}/campaigns`;
   const authParams = {
@@ -66,7 +74,7 @@ export const sourceNodes = async (
   const campaignsFirstBatch = await axios.get(campaignsURL, {
     ...authParams,
     params: {
-      fields: `${campaignFields.join(',')},campaigns.id,total_items`,
+      fields: campaignFields,
       count: count || defaultCount,
       sort_field: 'send_time',
       sort_dir: 'DESC',
@@ -86,7 +94,7 @@ export const sourceNodes = async (
       count,
       defaultCount,
       authParams,
-      campaignFields,
+      fields: campaignFields,
       campaignsURL,
     });
   }
@@ -97,6 +105,17 @@ export const sourceNodes = async (
     const internalId = `mailchimp-campaign-${c.id}`;
     const cacheableContent = JSON.stringify(c);
     const cachedCampaign = await cache.get(internalId);
+
+    if (c.id === undefined) {
+      console.log(
+        `${colorizeLog("A campaign couldn't be fetched", consoleColors.BgRed)}${
+          c.settings && c.settings.subject_line
+            ? `: ${c.settings.subject_line}`
+            : ''
+        }`
+      );
+      continue;
+    }
 
     // Make sure the campaign metadata is the same as the one just
     // fetch from Mailchimp. If so, touch the node and don't mind about

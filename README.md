@@ -2,7 +2,7 @@
 
 Use your [Mailchimp API](https://developer.mailchimp.com) key to download your campaigns into [Gatsby](https://www.gatsbyjs.org/)'s GraphQL data layer!
 
-⚠ **Please note:** This plugin was made out of a specific necessity, so it doesn't cover all of Mailchimp's data sources, focusing only on campaigns. If you want to add extra functionalities, feel free to [create a PR](https://github.com/hcavalieri/gatsby-source-mailchimp/pulls) and contribute to the plugin :smile:
+⚠ **Please note:** This plugin was made out of a specific necessity, so it doesn't cover all of Mailchimp's data sources, focusing only on campaigns. If you want to add extra functionalities, feel free to [create a PR](https://github.com/hcavalieri/gatsby-source-mailchimp/pulls) and contribute :smile:
 
 ## Table of content
 
