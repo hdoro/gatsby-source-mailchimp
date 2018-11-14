@@ -3,7 +3,7 @@
     "baseUrl": ".",
     "outDir": ".",
     "module": "commonjs",
-    "target": "es6",
+    "target": "es2017",
     "sourceMap": false,
     "allowJs": false,
     "moduleResolution": "node",

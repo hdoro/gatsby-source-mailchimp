@@ -1,8 +1,7 @@
-import axios from 'axios';
+import axios, { AxiosPromise } from 'axios';
 import { validateConfig } from './configValidation';
 import { colorizeLog, consoleColors } from './helpers';
 import { fetchAllCampaigns } from './fetchAllCampaigns';
-import { fetchContent } from './fetchContent';
 
 export interface IPluginOptions {
   plugins: any[];
@@ -22,6 +21,7 @@ const defaultCampaignsFields = [
   'campaigns.send_time',
   'campaigns.settings.subject_line',
   'campaigns.settings.preview_text',
+  'campaigns.settings.title',
 ];
 const defaultContentFields = ['html'];
 const defaultNodeType = 'MailchimpCampaign';
@@ -100,12 +100,10 @@ export const sourceNodes = async (
   }
   console.timeEnd(colorizeLog('\nMailchimp campaigns fetched in'));
 
+  let campaignRequests: AxiosPromise[] = [];
+  let campaignsMetadata: any[] = [];
   console.time(colorizeLog('\nMailchimp campaign content fetched in'));
   for (const c of campaigns) {
-    const internalId = `mailchimp-campaign-${c.id}`;
-    const cacheableContent = JSON.stringify(c);
-    const cachedCampaign = await cache.get(internalId);
-
     if (c.id === undefined) {
       console.log(
         `${colorizeLog("A campaign couldn't be fetched", consoleColors.BgRed)}${
@@ -117,6 +115,10 @@ export const sourceNodes = async (
       continue;
     }
 
+    const internalId = `mailchimp-campaign-${c.id}`;
+    const cacheableContent = JSON.stringify(c);
+    const cachedCampaign = await cache.get(internalId);
+
     // Make sure the campaign metadata is the same as the one just
     // fetch from Mailchimp. If so, touch the node and don't mind about
     // fetching the content again in order to save some build time
@@ -125,20 +127,37 @@ export const sourceNodes = async (
       continue;
     }
 
-    // Fetch the campaign's content
+    // Define the campaign's content request
     const contentURL = `${campaignsURL}/${c.id}/content`;
-    const content = await fetchContent({
-      URL: contentURL,
-      contentFields,
-      authParams,
-    });
+    campaignRequests = [
+      ...campaignRequests,
+      axios.get(contentURL, {
+        ...authParams,
+        params: {
+          fields: contentFields.join(','),
+        },
+      })
+    ];
+    campaignsMetadata = [
+      ...campaignsMetadata,
+      c,
+    ];
+  }
 
+  const campaignsContent = await Promise.all(campaignRequests);
+
+  for (let i = 0; i < campaignsContent.length; i++) {
+    const meta = campaignsMetadata[i];
+    const content = campaignsContent[i];
+
+    const internalId = `mailchimp-campaign-${meta.id}`;
+    const cacheableContent = JSON.stringify(meta);
     await cache.set(internalId, { content: cacheableContent });
 
     const campaignNode = {
-      ...c,
+      ...meta,
       ...content.data,
-      campaignId: c.id,
+      campaignId: meta.id,
       // meta information for the node
       id: internalId,
       parent: null,
@@ -153,4 +172,5 @@ export const sourceNodes = async (
     createNode(campaignNode);
   }
   console.timeEnd(colorizeLog('\nMailchimp campaign content fetched in'));
+
 };

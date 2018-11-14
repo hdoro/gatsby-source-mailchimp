@@ -56,7 +56,7 @@ Go through http://localhost:8000/___graphql after running `gatsby develop` to un
 
 ### Default `campaignFields` value
 
-In terms of metadata, I believe most users will only need the campaign's `type` and `status` for filtering; `send_time` for displaying dates for users; and `subject_line` and `preview_text` for showing a preview of the campaign. For such, the default fields are as follow:
+In terms of metadata, I believe most users will only need the campaign's `type` and `status` for filtering; `title` for internal usage; `send_time` for displaying dates for users; and `subject_line` and `preview_text` for showing a preview of the campaign. For such, the default fields are as follow:
 
 ```js
 const defaultCampaignsFields = [
@@ -65,6 +65,7 @@ const defaultCampaignsFields = [
   'campaigns.send_time',
   'campaigns.settings.subject_line',
   'campaigns.settings.preview_text',
+  'campaigns.settings.title',
 ];
 ```
 
@@ -106,6 +107,16 @@ This example is based off [Gatsby Docs' implementation](https://next.gatsbyjs.or
 As of now, the only known caveat is that, in order to preserve cache and avoid fetching the HTML content for each campaign every single time (which takes from 20s to 1m for 50 large campaigns), the plugin uses Gatsby's cache in a way that **considers changes made only to the `campaignFields`**. If you make a minor change to your HTML, as it stands, you'll have to change some of the campaign metadata that you're pulling into your site.
 
 Unfortunately, Mailchimp doesn't offer a `last_edited` field, so all we can do for now is to avoid caching alltogether. I haven't added a flag for this because it seems quite unnecessary, but feel free to create an optional `avoidCaching` param if you need!
+
+## Reference
+
+The process to save campaigns in `gatsby-node.js` is as follows:
+
+1. We hit the `/campaigns/` endpoint with due limits and pagination (set by user configuration);
+2. This returns each campaign's metadata, which is used to check the cache.
+3. If it's in cache, then we're good, else we add a request to its content to an array;
+4. We run `Promise.all` with this array and iterate over it to get each campaign's content;
+5. Finally, we join the metadata and content and create the node, setting a new entry to the cache :wink:.
 
 ## TODO
 
