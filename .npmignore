@@ -1,8 +1,8 @@
 src
-.babelrc
-.editorconfig
 .git
 tsconfig.json
 tslint.json
 .prettierrc
 .gitignore
+yarn-error.log
+backup

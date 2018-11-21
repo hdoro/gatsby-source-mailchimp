@@ -121,6 +121,7 @@ The process to save campaigns in `gatsby-node.js` is as follows:
 ## TODO
 
 - Explore better ways to cache the content.
+- Concurrent requests in a way that respects Mailchimp's 10 requests/minute limitation
 
 ## License
 

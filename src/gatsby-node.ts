@@ -1,7 +1,6 @@
 import axios, { AxiosPromise } from 'axios';
 import { validateConfig } from './configValidation';
 import { colorizeLog, consoleColors } from './helpers';
-import { fetchAllCampaigns } from './fetchAllCampaigns';
 
 export interface IPluginOptions {
   plugins: any[];
@@ -88,19 +87,30 @@ export const sourceNodes = async (
   }
 
   if (data.total_items > campaigns.length && count === 0) {
-    campaigns = await fetchAllCampaigns({
-      campaigns,
-      totalItems: data.total_items,
-      count,
-      defaultCount,
-      authParams,
-      fields: campaignFields,
-      campaignsURL,
-    });
+    const reqLength = campaigns.length;
+    const extraTimesToFetch = Math.ceil(data.total_items / reqLength);
+    const reqArray = Array.from(
+      { length: extraTimesToFetch },
+      (v, i) => i * reqLength
+    );
+    for (const t of reqArray) {
+      const newBatch = await axios.get(campaignsURL, {
+        ...authParams,
+        params: {
+          status: 'sent',
+          offset: t,
+          fields: campaignFields,
+          count: count || defaultCount,
+          sort_field: 'send_time',
+          sort_dir: 'DESC',
+        },
+      });
+      campaigns = [...campaigns, ...newBatch.data.campaigns];
+    }
   }
   console.timeEnd(colorizeLog('\nMailchimp campaigns fetched in'));
 
-  let campaignRequests: AxiosPromise[] = [];
+  let campaignRequests: any[] = [];
   let campaignsMetadata: any[] = [];
   console.time(colorizeLog('\nMailchimp campaign content fetched in'));
   for (const c of campaigns) {
@@ -136,15 +146,23 @@ export const sourceNodes = async (
         params: {
           fields: contentFields.join(','),
         },
-      })
+      }),
     ];
-    campaignsMetadata = [
-      ...campaignsMetadata,
-      c,
-    ];
+    campaignsMetadata = [...campaignsMetadata, c];
   }
 
-  const campaignsContent = await Promise.all(campaignRequests);
+  let campaignsContent: any = [];
+
+  const concurrReq = 3;
+  const reqSegments = Array.from(
+    { length: Math.ceil(campaignRequests.length / concurrReq) },
+    (v, i) => i * concurrReq
+  );
+  for (const t of reqSegments) {
+    const requests = campaignRequests.slice(t, t + concurrReq);
+    const newContent = await Promise.all(requests);
+    campaignsContent = [...campaignsContent, newContent];
+  }
 
   for (let i = 0; i < campaignsContent.length; i++) {
     const meta = campaignsMetadata[i];
@@ -172,5 +190,4 @@ export const sourceNodes = async (
     createNode(campaignNode);
   }
   console.timeEnd(colorizeLog('\nMailchimp campaign content fetched in'));
-
 };

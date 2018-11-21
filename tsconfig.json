@@ -18,6 +18,7 @@
   },
   "exclude": [
     "node_modules",
+    "backup",
     "build",
     "scripts",
     "acceptance-tests",
