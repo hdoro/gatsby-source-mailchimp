@@ -1,7 +1,7 @@
 /node_modules
 configValidation.js
 gatsby-node.js
-fetchAllCampaigns.js
+fetchCampaigns.js
 fetchContent.js
 helpers.js
 yarn-error.log
